@@ -22,12 +22,13 @@
   body{font-family:var(--font);font-size:15px;line-height:1.5;color:var(--ink);
        background:radial-gradient(120% 90% at 50% 0%,var(--bg0),var(--bg1) 75%)}
   button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  body.lock{position:fixed;inset:0;overflow:hidden;width:100%}
   input,select{font:inherit;color:var(--ink)}
   .hideme{display:none!important}
 
   /* ================= VIEW 1 : THE CARD ================= */
   #viewCard{min-height:100dvh;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-            gap:26px;padding:calc(20px + env(safe-area-inset-top)) 18px calc(34px + env(safe-area-inset-bottom))}
+            gap:24px;padding:calc(14px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom) + 10vh)}
   .topbar{width:min(92vw,560px);display:flex;justify-content:flex-end}
   #manageBtn{display:inline-flex;align-items:center;gap:8px;font-size:.82rem;font-weight:600;letter-spacing:.02em;
              color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:8px 16px;
@@ -47,7 +48,7 @@
         background-size:cover;background-position:center;
         box-shadow:0 34px 64px -20px rgba(20,32,40,.45),0 10px 24px rgba(20,32,40,.22),
                    inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.4)}
-  .face.back{transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+  .face.back{transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px}
   .gloss{position:absolute;inset:0;pointer-events:none;
          background:radial-gradient(560px 360px at var(--mx,28%) var(--my,18%),rgba(255,255,255,.16),transparent 62%);
          mix-blend-mode:screen}
@@ -81,7 +82,7 @@
   .back-veil{position:absolute;inset:0;background:rgba(5,8,11,.62);backdrop-filter:blur(2px)}
   .face.back>*{position:relative}
   .mono-label{font-family:var(--mono);font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.78)}
-  .qrbox{background:#fff;padding:11px;border-radius:14px;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .qrbox{background:#fff;padding:8px;border-radius:12px;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.5)}
   .qr-lock{position:absolute;inset:0;border-radius:14px;background:rgba(12,15,18,.92);color:#EDEFF0;
            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px;font-size:.78rem}
   .qr-lock svg{width:24px;height:24px}
@@ -337,8 +338,8 @@ function saveSoon(){
 }
 
 /* ---------- views ---------- */
-$("manageBtn").addEventListener("click",()=>{ $("viewCard").classList.add("hideme"); $("viewManage").classList.remove("hideme"); });
-$("doneBtn").addEventListener("click",()=>{ $("viewManage").classList.add("hideme"); $("viewCard").classList.remove("hideme"); });
+$("manageBtn").addEventListener("click",()=>{ $("viewCard").classList.add("hideme"); $("viewManage").classList.remove("hideme"); document.body.classList.remove("lock"); });
+$("doneBtn").addEventListener("click",()=>{ $("viewManage").classList.add("hideme"); $("viewCard").classList.remove("hideme"); document.body.classList.add("lock"); window.scrollTo(0,0); });
 
 /* ---------- form ---------- */
 function hydrateForm(){
@@ -417,14 +418,22 @@ function buildVCard(){
   return L.join("\r\n");
 }
 function trustedLocked(){ return audience==="trusted"&&S.pinEnabled&&!trustedUnlocked; }
+function qrSize(){
+  const st=document.getElementById("stage");
+  const w=st?st.getBoundingClientRect().width:360;
+  return Math.max(96,Math.min(170,Math.round(w/1.586*0.56)));
+}
 function renderQR(){
   $("qrAudienceLabel").textContent=audience==="trusted"?"Trusted profile":"Public profile";
   $("qrLock").classList.toggle("hideme",!trustedLocked());
   const box=$("qr"); box.innerHTML="";
-  if(trustedLocked()){ box.innerHTML='<div style="width:180px;height:180px"></div>'; return; }
-  try{ new QRCode(box,{text:buildVCard(),width:180,height:180,correctLevel:QRCode.CorrectLevel.M}); }
-  catch(e){ box.innerHTML='<div style="width:180px;font-size:.78rem;color:#16242E;text-align:center">Too much data for one QR — hide some fields or shorten links.</div>'; }
+  const sz=qrSize();
+  if(trustedLocked()){ box.innerHTML='<div style="width:'+sz+'px;height:'+sz+'px"></div>'; return; }
+  try{ new QRCode(box,{text:buildVCard(),width:sz,height:sz,correctLevel:QRCode.CorrectLevel.M}); }
+  catch(e){ box.innerHTML='<div style="width:'+sz+'px;font-size:.78rem;color:#16242E;text-align:center">Too much data for one QR — hide some fields or shorten links.</div>'; }
 }
+let rsT=null;
+window.addEventListener("resize",()=>{clearTimeout(rsT);rsT=setTimeout(renderQR,200);});
 function renderAll(){ renderCard(); renderQR(); }
 
 /* ---------- 3D tilt / flip ---------- */
@@ -556,6 +565,7 @@ $("copyBtn").addEventListener("click",async ()=>{
 });
 
 syncPinGate();
+document.body.classList.add("lock");
 load();
 })();
 </script>
